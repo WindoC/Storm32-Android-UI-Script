@@ -42,7 +42,7 @@ def sgdata(outbyte):
   droid.bluetoothWriteBinary(outstr)
   print("Sent!")
   
-  time.sleep(0.2)
+  time.sleep(0.1)
   
   #Receive byte
   print("Try to receive bytes ...")
@@ -110,6 +110,25 @@ def CMD_SETPITCHROLLYAW(ppwm,rpwm,ypwm):
  outmp = b'\x06\x12' + pwm2b(ppwm) + pwm2b(rpwm) + pwm2b(ypwm)
  outmp = b'\xfa' + outmp + crc(outmp)
  sgdata(outmp)
+
+def calc_waittime(np,ny):
+ global cp
+ global cy
+ dp = 1.0 * abs(cp-np) / 30
+ dy = 1.0 * abs(cy-ny) / 30
+ cp = np
+ cy = ny
+ if(dp>dy):
+  return dp
+ else:
+  return dy
+
+def takephoto(np,ny):
+ CMD_SETANGLE(np,0,ny)
+ time.sleep(calc_waittime(np,ny))
+ time.sleep(delaybefore)
+ ACT_YICAM_TRIGGER()
+ time.sleep(delayafter)
  
 ################## Main ##############################################
 
@@ -125,61 +144,48 @@ try:
  time.sleep(1)
  
  try:
- 
+  
+  global cp
+  global cy
+  cp = 0
+  cy = 0
+  
   CMD_SETANGLE(0,0,0)
   
+  global delaybefore
+  global delayafter
+  delaybefore = 1
+  delayafter = 2
+  
   # Active the remote control
-  for i in range(0,3,1):
+  for i in range(0,1,1):
    ACT_YICAM_TRIGGER()
    time.sleep(2)
  
-  delaybefore = 1
-  delayafter = 1
- 
-  CMD_SETANGLE(-90,0,0)
-  time.sleep(90/20)
-  time.sleep(delaybefore)
-  ACT_YICAM_TRIGGER()
-  time.sleep(delayafter)
+  takephoto(-90,0)
   
-  CMD_SETANGLE(-90,0,-90)
-  time.sleep(90/20)
-  time.sleep(delaybefore)
-  ACT_YICAM_TRIGGER()
-  time.sleep(delayafter)
+  takephoto(-90,-90)
   
   pitch=-45
-  numphoto = 3
+  numphoto = 4
   angletmp = 360.0 / numphoto
   dir = 1
   for i in range(0,numphoto,dir):
-   CMD_SETANGLE(pitch,0,i*angletmp+angletmp/2-180)
-   time.sleep(angletmp/20)
-   time.sleep(delaybefore)
-   ACT_YICAM_TRIGGER()
-   time.sleep(delayafter)
+   takephoto(pitch,i*angletmp+angletmp/2-180)
   
   pitch=0
   numphoto = 6
   angletmp = 360.0 / numphoto
   dir = -1
   for i in range(numphoto,0,dir):
-   CMD_SETANGLE(pitch,0,i*angletmp-angletmp/2-180)
-   time.sleep((angletmp)/20)
-   time.sleep(delaybefore)
-   ACT_YICAM_TRIGGER()
-   time.sleep(delayafter)  
+   takephoto(pitch,i*angletmp-angletmp/2-180) 
   
   pitch=45
-  numphoto = 3
+  numphoto = 4
   angletmp = 360.0 / numphoto
   dir = 1
   for i in range(0,numphoto,dir):
-   CMD_SETANGLE(pitch,0,i*angletmp+angletmp/2-180)
-   time.sleep(angletmp/20)
-   time.sleep(delaybefore)
-   ACT_YICAM_TRIGGER()
-   time.sleep(delayafter)
+   takephoto(pitch,i*angletmp+angletmp/2-180)
    
   CMD_SETANGLE(0,0,0)
   
@@ -192,4 +198,3 @@ except:
 print("Try to stop BT and exit ...")
 droid.bluetoothStop()
 droid.exit()
-
